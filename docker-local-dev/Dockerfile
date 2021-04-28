@@ -44,7 +44,7 @@ RUN which codium
 
 # vscodium-extensions
 #RUN /usr/bin/codium --install-extension felixfbecker.php-intellisense
-#RUN /usr/bin/codium --install-extension felixfbecker.php-debug
+RUN /usr/bin/codium --install-extension mhutchie.git-graph
 
 RUN /usr/bin/codium --list-extensions
 

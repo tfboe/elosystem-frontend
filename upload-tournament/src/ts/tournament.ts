@@ -75,16 +75,16 @@ export function formatDate(date: Date) {
 }
 
 export enum RankingType {
-    OpenSingle,
-    OpenDouble,
-    WomenSingle,
-    WomenDouble,
-    JuniorSingle,
-    JuniorDouble,
-    SeniorSingle,
-    SeniorDouble,
-    Mixed,
-    Classic
+    OpenSingle = "Open Single",
+    OpenDouble = "Open Double",
+    WomenSingle = "Women Single",
+    WomenDouble = "Women Double",
+    JuniorSingle = "Junior Single",
+    JuniorDouble = "Junior Double",
+    SeniorSingle = "Senior Single",
+    SeniorDouble = "Senior Double",
+    Mixed = "Mixed",
+    Classic = "Classic"
 }
 
 export class Competition extends Modes {

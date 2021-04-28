@@ -233,8 +233,11 @@ function parseTournament(tournament: Element, playerInfos: PlayerInfoCollection)
     res.tournament.competitions = [];
     res.playerInfos = playerInfos;
 
+    let div = document.getElementById("parsing-result");
+    let divCompetitionLog = document.createElement("div");
+    div.appendChild(divCompetitionLog);
     for (let el of getElementsByName(tournament, "competition")) {
-        let competition = parseCompetition(el, timezone, res.playerInfos, res.tournament);
+        let competition = parseCompetition(el, timezone, res.playerInfos, res.tournament, divCompetitionLog);
         if (competition !== null) {
             res.tournament.competitions.push(competition);
         }
@@ -243,7 +246,7 @@ function parseTournament(tournament: Element, playerInfos: PlayerInfoCollection)
 }
 
 function parseCompetition(competition: Element, timezone: string, playerInfos: PlayerInfoCollection,
-                          tournament: Tournament): Competition {
+                          tournament: Tournament, divCompetitionLog: HTMLDivElement): Competition {
     assert(competition.nodeName === 'competition', "Wrong competition element");
     let linkToPhaseId = getElementByName(competition, "linkToPhaseId", true);
     assert(linkToPhaseId === null || linkToPhaseId.textContent === "0",
@@ -256,7 +259,11 @@ function parseCompetition(competition: Element, timezone: string, playerInfos: P
         let rankingSystemId = tfboe(rankingType);
         if (rankingSystemId != null) {
             res.rankingSystems = [rankingSystemId];
+            divCompetitionLog.innerText += "Competition " + res.name + " gets ranked as " + rankingType + "\n";
         }
+    }
+    if (res.rankingSystems.length === 0) {
+        divCompetitionLog.innerText += "Competition " + res.name + " gets NOT RANKED\n";
     }
     res.startTime = formatDateTime(parseDateTime(getElementByName(competition, "beginDate").textContent),
         timezone);

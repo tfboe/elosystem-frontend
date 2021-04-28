@@ -4,16 +4,16 @@ import { RankingType } from "./tournament";
 
 export function tfboe(rankingType: RankingType): null | string {
     switch(rankingType) {
-        case RankingType.OpenSingle: return null;
-        case RankingType.OpenDouble: return null;
-        case RankingType.WomenSingle: return null;
-        case RankingType.WomenDouble: return null;
-        case RankingType.JuniorSingle: return null;
-        case RankingType.JuniorDouble: return null;
-        case RankingType.SeniorSingle: return null;
-        case RankingType.SeniorDouble: return null;
-        case RankingType.Classic: return null;
-        case RankingType.Mixed: return null;
+        case RankingType.OpenSingle: return "d08eda56-a7ee-11eb-8243-0242ac140002";
+        case RankingType.OpenDouble: return "dc264cb5-a7ee-11eb-8243-0242ac140002";
+        case RankingType.WomenSingle: return "e6456a1e-a7ee-11eb-8243-0242ac140002";
+        case RankingType.WomenDouble: return "e8fc01a0-a7ee-11eb-8243-0242ac140002";
+        case RankingType.JuniorSingle: return "edba2a8b-a7ee-11eb-8243-0242ac140002";
+        case RankingType.JuniorDouble: return "f06e92ce-a7ee-11eb-8243-0242ac140002";
+        case RankingType.SeniorSingle: return "f4f95737-a7ee-11eb-8243-0242ac140002";
+        case RankingType.SeniorDouble: return "f7972e41-a7ee-11eb-8243-0242ac140002";
+        case RankingType.Classic: return "fbb021e4-a7ee-11eb-8243-0242ac140002";
+        case RankingType.Mixed: return "fe9448f4-a7ee-11eb-8243-0242ac140002";
         default: return null;
     }
 }
