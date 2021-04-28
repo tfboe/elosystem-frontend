@@ -1,0 +1,23 @@
+version: "3.9"
+services:
+  core:
+    build: .
+    ports:
+      - 8080:8080
+    volumes:
+      - ..:/workspace 
+      - /tmp/.X11-unix:/tmp/.X11-unix 
+      - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket
+      - /dev/shm:/dev/shm
+      - vscodeuserdata:/userdata
+      - user_home:/home/dev/
+      - ${SSH_AUTH_SOCK}:/ssh-agent
+    privileged: true
+    environment:
+      - DISPLAY=${DISPLAY}
+      - GIT_NAME=${GIT_NAME}
+      - GIT_EMAIL=${GIT_EMAIL}
+      - SSH_AUTH_SOCK=/ssh-agent
+volumes:
+  vscodeuserdata:
+  user_home:

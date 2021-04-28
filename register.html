@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Register new User</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+</head>
+<body>
+<form id="registerForm">
+    E-Mail: <input title="E-Mail" name="email" type="text"/> <br>
+    Password: <input title="Password" name="password" type="password"/> <br>
+    <input type="submit" value="Register"/>
+</form>
+<div id="output-div"></div>
+<textarea style="display: none;" cols="100" rows="5" id="output-text"></textarea>
+<script>
+    function getJsonFromForm(form) {
+      const values = form.serializeArray();
+      let res = {};
+      for (let i = 0; i < values.length; i++) {
+        res[values[i].name] = values[i].value;
+      }
+      return res;
+    }
+    $('#registerForm').on('submit', function () {
+        const input = getJsonFromForm($('#registerForm'));
+        $.ajax({
+          //url: "http://elo.tischfussball.wien/register",
+          url: "http://localhost:8000/register",
+          //url: "http://elo.tfboe.org/index.php/register",
+          method: "POST",
+          data: JSON.stringify(input),
+          contentType: "application/json; charset=utf-8",
+          dataType: "json",
+          success: function (response, textStatus, jqXHR) {
+            $('#output-div').text("User successfully registered! Please use the following jwt-token for accessing the API");
+            $('#output-text').text(jqXHR.getResponseHeader('jwt-token')).css('display', 'block').select();
+          },
+          error: function (jqXHR, textStatus, errorThrown) {
+            console.log(jqXHR);
+            console.log(textStatus);
+            console.log(errorThrown);
+          }
+        });
+        return false;
+    });
+</script>
+</body>
+</html>

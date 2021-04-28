@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Recompute Rankings</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+</head>
+<body>
+<form id="recomputeRankings">
+    <input type="submit" value="Recompute"/>
+</form>
+<div id="output-div"></div>
+<textarea style="display: none;" cols="100" rows="5" id="output-text"></textarea>
+<script>
+    $('#recomputeRankings').on('submit', function () {
+        $.ajax({
+          //url: "http://elo.tischfussball.wien/rankings",
+          url: "http://localhost:8000/recalculateRankings",
+          //url: "http://elo.tfboe.org/backend/public/index.php/rankings",
+          method: "POST",
+          contentType: "application/json; charset=utf-8",
+          dataType: "json",
+          success: function (response) {
+            $('#output-div').text("Success: " . response.toString());
+          },
+          error: function (jqXHR, textStatus, errorThrown) {
+            console.log(jqXHR);
+            console.log(textStatus);
+            console.log(errorThrown);
+          }
+        });
+        return false;
+    });
+</script>
+</body>
+</html>
