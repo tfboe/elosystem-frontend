@@ -3,6 +3,7 @@
 import { RankingType } from "./tournament";
 
 export function tfboe(rankingType: RankingType): null | string {
+    console.log(rankingType);
     switch(rankingType) {
         case RankingType.OpenSingle: return "d08eda56-a7ee-11eb-8243-0242ac140002";
         case RankingType.OpenDouble: return "dc264cb5-a7ee-11eb-8243-0242ac140002";

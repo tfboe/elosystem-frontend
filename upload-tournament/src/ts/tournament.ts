@@ -87,6 +87,8 @@ export enum RankingType {
     Classic = "Classic"
 }
 
+export type RankingTypeString = keyof typeof RankingType;
+
 export class Competition extends Modes {
     name: string;
     startTime?: string;

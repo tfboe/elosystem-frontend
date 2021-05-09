@@ -11,6 +11,7 @@ import TournamentInfo, {
     PlayerInfoCollection,
     Ranking,
     RankingType,
+    RankingTypeString,
     Team,
     Tournament
 } from '../tournament';
@@ -33,7 +34,9 @@ function parseXml(text: string): XMLDocument {
 function parseTournamentInfo(xmlDoc: XMLDocument): TournamentInfo {
     assert(xmlDoc.childElementCount === 1, "Wrong number of root elements");
     let ffft = xmlDoc.firstElementChild;
-    return parseFFFT(ffft);
+    let tournamentInfo = parseFFFT(ffft);
+    console.log(tournamentInfo);
+    return tournamentInfo;
 }
 
 function parseFFFT(ffft: Element): TournamentInfo {
@@ -234,10 +237,20 @@ function parseTournament(tournament: Element, playerInfos: PlayerInfoCollection)
     res.playerInfos = playerInfos;
 
     let div = document.getElementById("parsing-result");
-    let divCompetitionLog = document.createElement("div");
-    div.appendChild(divCompetitionLog);
+    let divCompetitionTable = document.createElement("div");
+    div.appendChild(divCompetitionTable);
+    let competitionTable = document.createElement("table");
+    divCompetitionTable.appendChild(competitionTable);
+    let headers = document.createElement("tr");
+    divCompetitionTable.appendChild(headers);
+    let competitionHeader = document.createElement("th");
+    competitionHeader.innerText = "Competition";
+    headers.appendChild(competitionHeader);
+    let categoryHeader = document.createElement("th");
+    categoryHeader.innerText = "Category";
+    headers.appendChild(categoryHeader);
     for (let el of getElementsByName(tournament, "competition")) {
-        let competition = parseCompetition(el, timezone, res.playerInfos, res.tournament, divCompetitionLog);
+        let competition = parseCompetition(el, timezone, res.playerInfos, res.tournament, competitionTable);
         if (competition !== null) {
             res.tournament.competitions.push(competition);
         }
@@ -245,8 +258,28 @@ function parseTournament(tournament: Element, playerInfos: PlayerInfoCollection)
     return res;
 }
 
+function createCategoryDropdown(categoryOptions: string[], competition: Competition): HTMLSelectElement {
+    let categoryDropdown = document.createElement("select");
+    for (let option of categoryOptions) {
+        let optionElement = document.createElement("option");
+        optionElement.value = option;
+        optionElement.innerText = option;
+        categoryDropdown.appendChild(optionElement);
+    }
+    categoryDropdown.onchange = function() {
+        let value = categoryDropdown.value;
+        if (value === "Not Rated") {
+            competition.rankingSystems = [];
+        } else {
+            console.log(value);
+            competition.rankingSystems = [tfboe(value as RankingType)];
+        }
+    };
+    return categoryDropdown;
+}
+
 function parseCompetition(competition: Element, timezone: string, playerInfos: PlayerInfoCollection,
-                          tournament: Tournament, divCompetitionLog: HTMLDivElement): Competition {
+                          tournament: Tournament, competitionTable: HTMLTableElement): Competition {
     assert(competition.nodeName === 'competition', "Wrong competition element");
     let linkToPhaseId = getElementByName(competition, "linkToPhaseId", true);
     assert(linkToPhaseId === null || linkToPhaseId.textContent === "0",
@@ -254,17 +287,6 @@ function parseCompetition(competition: Element, timezone: string, playerInfos: P
     let res = new Competition();
     res.name = getCompetitionName(competition);
     res.rankingSystems = [];
-    let rankingType = getRankingType(competition);
-    if (rankingType !== null) {
-        let rankingSystemId = tfboe(rankingType);
-        if (rankingSystemId != null) {
-            res.rankingSystems = [rankingSystemId];
-            divCompetitionLog.innerText += "Competition " + res.name + " gets ranked as " + rankingType + "\n";
-        }
-    }
-    if (res.rankingSystems.length === 0) {
-        divCompetitionLog.innerText += "Competition " + res.name + " gets NOT RANKED\n";
-    }
     res.startTime = formatDateTime(parseDateTime(getElementByName(competition, "beginDate").textContent),
         timezone);
     res.endTime = formatDateTime(parseDateTime(getElementByName(competition, "endDate").textContent), timezone);
@@ -283,6 +305,42 @@ function parseCompetition(competition: Element, timezone: string, playerInfos: P
             return null;
         default:
             throw new ParseError("The type field of a competition must be SIMPLE, DOUBLE, DYP, OR FORMATION");
+    }
+
+    let row = document.createElement("tr");
+    competitionTable.appendChild(row);
+    let competitionEntry = document.createElement("td");
+    competitionEntry.innerText = res.name;
+    row.appendChild(competitionEntry);
+    let categoryEntry = document.createElement("td");
+
+    let categoryOptions = [
+        "Not Rated",
+        RankingType.OpenSingle,
+        RankingType.OpenDouble,
+        RankingType.WomenSingle,
+        RankingType.WomenDouble,
+        RankingType.JuniorSingle,
+        RankingType.JuniorDouble,
+        RankingType.SeniorSingle,
+        RankingType.SeniorDouble,
+        RankingType.Mixed,
+        RankingType.Classic
+    ];
+
+    let categoryDropdown = createCategoryDropdown(categoryOptions, res);
+    categoryEntry.appendChild(categoryDropdown);
+    row.appendChild(categoryEntry);
+    let rankingType = getRankingType(competition);
+    if (rankingType !== null) {
+        let rankingSystemId = tfboe(rankingType);
+        if (rankingSystemId != null) {
+            res.rankingSystems = [rankingSystemId];
+            categoryDropdown.selectedIndex = categoryOptions.indexOf(rankingType);
+        }
+    }
+    if (res.rankingSystems.length === 0) {
+        categoryDropdown.selectedIndex = 0;
     }
 
     let rankingSystem = getElementByName(competition, "rankingSystem", true);
@@ -337,6 +395,7 @@ function parseCompetition(competition: Element, timezone: string, playerInfos: P
 
     res.phases = [];
     let phases = getElementsByName(competition, "phase");
+    console.log(res.name);
     for (let el of phases) {
         res.phases.push(parsePhase(el, phases.length, timezone, teamMap, tournament));
     }
@@ -545,21 +604,23 @@ function getRankingType(competition: Element): null | RankingType {
         return null;
     }
 
-    let rankingSystem = getElementByName(competition, "rankingSystem", true).textContent;
-    switch (rankingSystem) {
-        case "OFFICIAL":
-            //we do nothing
-            break
-        case "CLASSIC":
-            // we only rank open double
-            if (type === "D" && category === "O") {
-                return RankingType.Classic;
-            } else {
+    let rankingSystem = getElementByName(competition, "rankingSystem", true);
+    if (rankingSystem !== null) {
+        switch (rankingSystem.textContent) {
+            case "OFFICIAL":
+                //we do nothing
+                break
+            case "CLASSIC":
+                // we only rank open double
+                if (type === "D" && category === "O") {
+                    return RankingType.Classic;
+                } else {
+                    return null;
+                }
+            default:
+                // all other rankingSystems are not ranked
                 return null;
-            }
-        default:
-            // all other rankingSystems are not ranked
-            return null;
+        }
     }
 
     switch (type) {
@@ -672,7 +733,7 @@ function parsePhase(phase: Element, numPhases: number, timezone: string,
     }
     res.rankings = [];
     let phaseRankings = getElementByName(phase, "phaseRanking");
-    let rankingEls = getElementsByName(phaseRankings, "");
+    let rankingEls = getElementsByName(phaseRankings, "ranking");
     let startNumberUniqueRankMap: { [key: number]: number } = {};
     if (rankingEls.length === 0) {
         //phase is not yet finished;
@@ -684,12 +745,19 @@ function parsePhase(phase: Element, numPhases: number, timezone: string,
             ranking.uniqueRank = parseInt(getElementByName(el, "rank").textContent);
             let sub = getElementByName(el, "definitivePhaseOpponentRanking");
             ranking.rank = parseInt(getElementByName(sub, "relativeRank").textContent);
-            let startNumber = teamMap[parseInt(getElementByName(sub, "teamId").textContent)].startNumber;
+            if (ranking.rank < 1) {
+                ranking.rank = ranking.uniqueRank;
+            }
+            let team = teamMap[parseInt(getElementByName(sub, "teamId").textContent)];
+            let startNumber = team.startNumber;
+            team.rank = ranking.rank;
             ranking.teamStartNumbers = [startNumber];
             startNumberUniqueRankMap[startNumber] = ranking.uniqueRank;
             res.rankings.push(ranking);
         }
     }
+    console.log(res.name);
+    console.log(startNumberUniqueRankMap);
     res.matches = [];
     for (let match of getElementsByName(phase, "teamMatch")) {
         let m = parseMatch(match, timezone, teamMap, startNumberUniqueRankMap, rankingEls.length !== 0, res.rankings);
@@ -720,21 +788,25 @@ function parseMatch(match: Element, timezone: string, teamMap: { [key: number]: 
     let teamA = teamMap[parseInt(id1.textContent)];
     let teamB = teamMap[parseInt(id2.textContent)];
 
-    if (!phaseFinished) {
-        let checkOrAdd = function (startNumber: number) {
-            if (!startNumberUniqueRankMap[startNumber]) {
-                let ranking = new Ranking();
-                ranking.uniqueRank = startNumber;
-                ranking.rank = 1;
-                ranking.teamStartNumbers = [startNumber];
-                startNumberUniqueRankMap[startNumber] = startNumber;
-                rankings.push(ranking);
-            }
-        };
-        checkOrAdd(teamA.startNumber);
-        checkOrAdd(teamB.startNumber);
-    }
+    let checkOrAdd = function (startNumber: number) {
+        if (!startNumberUniqueRankMap[startNumber]) {
+            let ranking = new Ranking();
+            ranking.uniqueRank = startNumber;
+            ranking.rank = ranking.uniqueRank;
+            ranking.teamStartNumbers = [startNumber];
+            startNumberUniqueRankMap[startNumber] = startNumber;
+            rankings.push(ranking);
+        }
+    };
+    checkOrAdd(teamA.startNumber);
+    checkOrAdd(teamB.startNumber);
 
+    if (!startNumberUniqueRankMap[teamA.startNumber]) {
+        throw new Error(teamA.startNumber + " does not exist in startNumberUniqueRankMap");
+    }
+    if (!startNumberUniqueRankMap[teamB.startNumber]) {
+        throw new Error(teamB.startNumber + " does not exist in startNumberUniqueRankMap");
+    }
     res.rankingsAUniqueRanks = [startNumberUniqueRankMap[teamA.startNumber]];
     res.rankingsBUniqueRanks = [startNumberUniqueRankMap[teamB.startNumber]];
 
