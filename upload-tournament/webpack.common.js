@@ -1,4 +1,5 @@
 const path = require('path');
+var webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
@@ -23,6 +24,9 @@ module.exports = {
     new HtmlWebpackPlugin({
       title: 'Upload Tournament',
       template: 'src/html/index.html'
+    }),
+    new webpack.EnvironmentPlugin({
+      'SERVER': 'http://localhost:8000'
     })
   ],
   resolve: {

@@ -22,12 +22,11 @@
       }
       return res;
     }
+    base_url = "http://localhost:8000";
     $('#loginForm').on('submit', function () {
         const input = getJsonFromForm($('#loginForm'));
         $.ajax({
-          //url: "http://elo.tischfussball.wien/login",
-          url: "http://localhost:8000/login",
-          //url: "http://elo.tfboe.org/index.php/login",
+          url: base_url + "/login",
           method: "POST",
           data: JSON.stringify(input),
           contentType: "application/json; charset=utf-8",

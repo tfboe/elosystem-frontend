@@ -6,7 +6,7 @@ import {assert} from "./parsers/parse-error";
 let $ = require("jquery");
 
 //let server = "http://elo.tfboe.org/backend/public/index.php";
-let server = "http://localhost:8000";
+let server = process.env.SERVER;
 
 
 interface Parser {

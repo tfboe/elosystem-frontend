@@ -12,11 +12,10 @@
 <div id="output-div"></div>
 <textarea style="display: none;" cols="100" rows="5" id="output-text"></textarea>
 <script>
+    base_url = "http://localhost:8000";
     $('#recomputeRankings').on('submit', function () {
         $.ajax({
-          //url: "http://elo.tischfussball.wien/rankings",
-          url: "http://localhost:8000/recalculateRankings",
-          //url: "http://elo.tfboe.org/backend/public/index.php/rankings",
+          url: base_url + "/login/recalculateRankings",
           method: "POST",
           contentType: "application/json; charset=utf-8",
           dataType: "json",

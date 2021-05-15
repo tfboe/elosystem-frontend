@@ -22,12 +22,11 @@
       }
       return res;
     }
+    base_url = "http://localhost:8000";
     $('#registerForm').on('submit', function () {
         const input = getJsonFromForm($('#registerForm'));
         $.ajax({
-          //url: "http://elo.tischfussball.wien/register",
-          url: "http://localhost:8000/register",
-          //url: "http://elo.tfboe.org/index.php/register",
+          url: base_url + "/register",
           method: "POST",
           data: JSON.stringify(input),
           contentType: "application/json; charset=utf-8",
