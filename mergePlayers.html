@@ -2,14 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Recompute Rankings</title>
+    <title>Merge Players</title>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 </head>
 <body>
+  <form id="playerData">
+    Player1 id (remains): <input title="player1" name="player1" type="text"/> <br>
+    Player2 id (gets deleted): <input title="player2" name="player2" type="text"/> <br>
+  </form>
   <form id="loginForm">
     E-Mail: <input title="E-Mail" name="email" type="text"/> <br>
     Password: <input title="Password" name="password" type="password"/> <br>
-    <input type="submit" value="Recompute"/>
+    <input type="submit" value="Merge"/>
 </form>
 <div id="output-div"></div>
 <script>
@@ -33,13 +37,12 @@
         success: function (response, textStatus, jqXHR) {
           const token = jqXHR.getResponseHeader('jwt-token');
           $.ajax({
-            url: base_url + "/recalculateRankings",
+            url: base_url + "/admin/mergePlayers",
             method: "POST",
             contentType: "application/json; charset=utf-8",
             dataType: "json",
-            contentType: false,
-            processData: false,
             timeout: 3600000,
+            data: JSON.stringify(getJsonFromForm($('#playerData'))),
             headers: {'Authorization': 'bearer ' + token},
             success: function (response) {
               $('#output-div').text("Success: " + response.toString());
@@ -48,7 +51,7 @@
               console.log(jqXHR);
               console.log(textStatus);
               console.log(errorThrown);
-              $('#output-div').text("Error during recompute: " + jqXHR.responseText);
+              $('#output-div').text("Error during merging: " + jqXHR.responseText);
             }
           });
         },
