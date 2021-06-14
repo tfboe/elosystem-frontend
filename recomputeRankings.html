@@ -24,6 +24,7 @@
   base_url = "http://localhost:8000";
   $('#loginForm').on('submit', function () {
       const input = getJsonFromForm($('#loginForm'));
+      $('#output-div').text("Logging in ...");
       $.ajax({
         url: base_url + "/login",
         method: "POST",
@@ -32,6 +33,7 @@
         dataType: "json",
         success: function (response, textStatus, jqXHR) {
           const token = jqXHR.getResponseHeader('jwt-token');
+          $('#output-div').text("Logging in ... success\nRecalculate rankings ... ");
           $.ajax({
             url: base_url + "/recalculateRankings",
             method: "POST",
@@ -42,7 +44,7 @@
             timeout: 3600000,
             headers: {'Authorization': 'bearer ' + token},
             success: function (response) {
-              $('#output-div').text("Success: " + response.toString());
+              $('#output-div').text("Logging in ... success\nRecalculate rankings ... done\nSuccess: " + response.toString());
             },
             error: function (jqXHR, textStatus, errorThrown) {
               console.log(jqXHR);
