@@ -28,6 +28,7 @@
   base_url = "http://localhost:8000";
   $('#loginForm').on('submit', function () {
       const input = getJsonFromForm($('#loginForm'));
+      $('#output-div').text("Logging in ...");
       $.ajax({
         url: base_url + "/login",
         method: "POST",
@@ -35,6 +36,7 @@
         contentType: "application/json; charset=utf-8",
         dataType: "json",
         success: function (response, textStatus, jqXHR) {
+          $('#output-div').html("Logging in ... success<br>Recalculate rankings ... ");
           const token = jqXHR.getResponseHeader('jwt-token');
           $.ajax({
             url: base_url + "/admin/mergePlayers",
@@ -45,7 +47,7 @@
             data: JSON.stringify(getJsonFromForm($('#playerData'))),
             headers: {'Authorization': 'bearer ' + token},
             success: function (response) {
-              $('#output-div').text("Success: " + response.toString());
+              $('#output-div').html("Logging in ... success<br>Recalculate rankings ... done<br>Success: " + response.toString());
             },
             error: function (jqXHR, textStatus, errorThrown) {
               console.log(jqXHR);
