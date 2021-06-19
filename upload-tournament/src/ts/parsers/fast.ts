@@ -758,9 +758,44 @@ function parsePhase(phase: Element, numPhases: number, timezone: string,
     }
     console.log(res.name);
     console.log(startNumberUniqueRankMap);
+
+    let defaultScoreMode: "ONE_SET" | "BEST_OF_THREE" | "BEST_OF_FIVE" = "ONE_SET";
+    let isWinningGames = getElementByName(phase, "winningGames").textContent === "true";
+    if (isWinningGames) {
+        let setsToWin = parseInt(getElementByName(phase, "winGameNumber").textContent)
+        if (setsToWin === 2) {
+            defaultScoreMode = "BEST_OF_THREE";
+        } else if (setsToWin === 3) {
+            defaultScoreMode = "BEST_OF_FIVE";
+        }
+    } else {
+        let gamesToPlay = parseInt(getElementByName(phase, "gamesNumber").textContent)
+        if (gamesToPlay >=4) {
+            defaultScoreMode = "BEST_OF_FIVE";
+        } else if (gamesToPlay >= 2) {
+            defaultScoreMode = "BEST_OF_THREE";
+        }
+    }
+    let defaultLoserBracketMode: "ONE_SET" | "BEST_OF_THREE" | "BEST_OF_FIVE" = "ONE_SET";
+    if (isWinningGames) {
+        let setsToWin = parseInt(getElementByName(phase, "loserBracketWinGameNumber").textContent)
+        if (setsToWin === 2) {
+            defaultLoserBracketMode = "BEST_OF_THREE";
+        } else if (setsToWin === 3) {
+            defaultLoserBracketMode = "BEST_OF_FIVE";
+        }
+    } else {
+        let gamesToPlay = parseInt(getElementByName(phase, "loserBracketGamesNumber").textContent)
+        if (gamesToPlay >=4) {
+            defaultLoserBracketMode = "BEST_OF_FIVE";
+        } else if (gamesToPlay >= 2) {
+            defaultLoserBracketMode = "BEST_OF_THREE";
+        }
+    }
+
     res.matches = [];
     for (let match of getElementsByName(phase, "teamMatch")) {
-        let m = parseMatch(match, timezone, teamMap, startNumberUniqueRankMap, rankingEls.length !== 0, res.rankings);
+        let m = parseMatch(match, timezone, teamMap, startNumberUniqueRankMap, rankingEls.length !== 0, res.rankings, defaultScoreMode, defaultLoserBracketMode);
         if (m !== null) {
             res.matches.push(m);
         }
@@ -770,7 +805,9 @@ function parsePhase(phase: Element, numPhases: number, timezone: string,
 
 function parseMatch(match: Element, timezone: string, teamMap: { [key: number]: Team },
                     startNumberUniqueRankMap: { [key: number]: number }, phaseFinished: boolean,
-                    rankings: Ranking[]): Match | null {
+                    rankings: Ranking[], 
+                    defaultScoreMode: "ONE_SET" | "BEST_OF_THREE" | "BEST_OF_FIVE", 
+                    defaultLoserBracketMode: "ONE_SET" | "BEST_OF_THREE" | "BEST_OF_FIVE"): Match | null {
     let id2 = getElementByName(match, "team2Id", true);
     let id1 = getElementByName(match, "team1Id", true);
     let id = parseInt(match.getAttribute("id"));
@@ -891,6 +928,14 @@ function parseMatch(match: Element, timezone: string, teamMap: { [key: number]: 
                 res.scoreMode = "BEST_OF_FIVE";
             } else {
                 throw Error("Unsupported number of games (winner has won " + maxScore + " games!) in match " + id);
+            }
+        }
+        if (res.scoreMode === "ONE_SET" && res.resultA + res.resultB === 1) {
+            // use default scoreMode
+            if (getElementByName(match, "isWinnerBracket").textContent === "false") {
+                res.scoreMode = defaultLoserBracketMode;
+            } else {
+                res.scoreMode = defaultScoreMode;
             }
         }
     }
