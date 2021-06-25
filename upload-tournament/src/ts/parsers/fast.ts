@@ -760,7 +760,8 @@ function parsePhase(phase: Element, numPhases: number, timezone: string,
     console.log(startNumberUniqueRankMap);
 
     let defaultScoreMode: "ONE_SET" | "BEST_OF_THREE" | "BEST_OF_FIVE" = "ONE_SET";
-    let isWinningGames = getElementByName(phase, "winningGames").textContent === "true";
+    let winningGames = getElementByName(phase, "winningGames", true);
+    let isWinningGames = winningGames === null || winningGames.textContent === "true";
     if (isWinningGames) {
         let setsToWin = parseInt(getElementByName(phase, "winGameNumber").textContent)
         if (setsToWin === 2) {
