@@ -1,6 +1,6 @@
 import fastParser from './parsers/fast';
 import '../css/style';
-import TournamentInfo, {PlayerInfo, PurePlayerInfo} from "./tournament";
+import TournamentInfo, {Match, Phase, PlayerInfo, PurePlayerInfo, Ranking, Team} from "./tournament";
 import {assert} from "./parsers/parse-error";
 
 let $ = require("jquery");
@@ -37,6 +37,14 @@ function handle(t: TournamentInfo, file: File) {
     div1.innerText = "The tournament was parsed successfully! Please enter your credentials to upload the tournament " +
         "to the server: ";
     div.appendChild(div1);
+    let nonPlayingParticipantsCheckbox = document.createElement("input");
+    nonPlayingParticipantsCheckbox.type = "checkbox";
+    nonPlayingParticipantsCheckbox.name = "nonPlayingParticipants";
+    div.appendChild(nonPlayingParticipantsCheckbox);
+    let label = document.createElement("label");
+    label.htmlFor = "nonPlayingParticipants";
+    label.innerText = "Has non-playing participants";
+    div.appendChild(label);
     let login = document.createElement("div");
     if (token === null) {
         login.appendChild(document.createTextNode("E-Mail:"));
@@ -56,7 +64,7 @@ function handle(t: TournamentInfo, file: File) {
     button.setAttribute("type", "button");
     button.setAttribute("id", "button");
     button.innerText = "Upload Tournament";
-    button.onclick = () => upload(t, file);
+    button.onclick = () => prepareUpload(t, file, nonPlayingParticipantsCheckbox.checked);
     login.appendChild(button);
     div.appendChild(login);
     let log = document.createElement("div");
@@ -134,7 +142,8 @@ interface ResolvedSearchResult {
     toUpdate: TfboePlayerInfo[],
     idMap: {[key: number]: number},
     newPlayers: PlayerInfo[],
-    newPlayersWithoutName: PlayerInfo[]
+    newPlayersWithoutName: PlayerInfo[],
+    nameMap: {[key: number]: String}
 }
 
 function resolveSearchResult(data: PlayerInfo[], res: SearchResult): ResolvedSearchResult {
@@ -144,6 +153,7 @@ function resolveSearchResult(data: PlayerInfo[], res: SearchResult): ResolvedSea
     let newPlayersWithoutName = [];
     let toUpdate = [];
     let idMap: {[key: number]: number} = {};
+    let nameMap: {[key: number]: String} = {};
     for (let index in data) {
         let found: PlayerResult[] = [];
         if (index in res) {
@@ -165,6 +175,7 @@ function resolveSearchResult(data: PlayerInfo[], res: SearchResult): ResolvedSea
                 }
             }
             idMap[search.tmpId] = found[0].id;
+            nameMap[found[0].id] = found[0].firstName + " " + found[0].lastName;
         } else {
             if (search.firstName == null || search.lastName == null || search.birthday == null) {
                 newPlayersWithoutName.push(search);
@@ -180,7 +191,7 @@ function resolveSearchResult(data: PlayerInfo[], res: SearchResult): ResolvedSea
         throw new Error("The following players have ambiguous itsf license numbers in the database: " +
             ambiguousItsfNumbers.join());
     }
-    return {toUpdate: toUpdate, idMap: idMap, newPlayers: newPlayers, newPlayersWithoutName: newPlayersWithoutName};
+    return {toUpdate: toUpdate, idMap: idMap, newPlayers: newPlayers, newPlayersWithoutName: newPlayersWithoutName, nameMap: nameMap};
 }
 
 function catchAPIErrors(e: any) {
@@ -200,7 +211,7 @@ class AsyncResponse {
 }
 
 
-function upload(t: TournamentInfo, file: File) {
+function prepareUpload(t: TournamentInfo, file: File, setNonPlayingParticipants: boolean) {
     document.getElementById("file").setAttribute("disabled", "true");
     document.getElementById("button").setAttribute("disabled", "true");
     document.getElementById("upload-error").style.display = "none";
@@ -245,8 +256,6 @@ function upload(t: TournamentInfo, file: File) {
                         notFoundPlayers.push(pl.itsfLicenseNumber);
                     }
                 }
-                console.log(playerInfos);
-                console.log(o.newPlayersWithoutName);
                 assert(notFoundPlayers.length === 0, "Players not found in ITSF database: " + notFoundPlayers.join());
                 return searchPlayer(o.newPlayersWithoutName)
                     .then((x: SearchResult) => resolveSearchResult(o.newPlayersWithoutName, x))
@@ -254,13 +263,14 @@ function upload(t: TournamentInfo, file: File) {
                         assert(o2.newPlayersWithoutName.length === 0, "Ever player should have a name after " +
                             "second iteration");
                         return {toUpdate: o.toUpdate.concat(o2.toUpdate),
-                            idMap: Object.assign(o.idMap, o2.idMap), newPlayers: o.newPlayers.concat(o2.newPlayers)};
+                            idMap: Object.assign(o.idMap, o2.idMap), newPlayers: o.newPlayers.concat(o2.newPlayers), 
+                            nameMap: Object.assign(o.nameMap, o2.nameMap)};
                     });
             });
         } else {
-            return {toUpdate: o.toUpdate, idMap: o.idMap, newPlayers: o.newPlayers};
+            return {toUpdate: o.toUpdate, idMap: o.idMap, newPlayers: o.newPlayers, nameMap: o.nameMap};
         }
-    }).then((o: {toUpdate: TfboePlayerInfo[], idMap: {[key: number]: number}, newPlayers: PlayerInfo[]}) => {
+    }).then((o: {toUpdate: TfboePlayerInfo[], idMap: {[key: number]: number}, newPlayers: PlayerInfo[], nameMap: {[key: number]: String}}) => {
         if (o.newPlayers.length > 0) {
             document.getElementById("log").innerHTML += "<br>Adding new players to TFBÖ-database ...";
             return apiRequest('addPlayers', o.newPlayers).then(markDone)
@@ -271,58 +281,262 @@ function upload(t: TournamentInfo, file: File) {
                     }
                     for (let i of o.newPlayers) {
                         assert(i.tmpId in o.idMap, "player " + i.toString() + " was not add to the database");
+                        o.nameMap[o.idMap[i.tmpId]] = i.firstName + " " + i.lastName;
                     }
-                    return {toUpdate: o.toUpdate, idMap: o.idMap};
+                    return {toUpdate: o.toUpdate, idMap: o.idMap, nameMap: o.nameMap};
                 });
         } else {
-            return {toUpdate: o.toUpdate, idMap: o.idMap};
+            return {toUpdate: o.toUpdate, idMap: o.idMap, nameMap: o.nameMap};
         }
-    }).then((o: {toUpdate: TfboePlayerInfo[], idMap: {[key: number]: number}}) => {
+    }).then((o: {toUpdate: TfboePlayerInfo[], idMap: {[key: number]: number}, nameMap: {[key: number]: String}}) => {
         if (o.toUpdate.length > 0) {
             document.getElementById("log").innerHTML += "<br>Update players in TFBÖ-database ...";
             return apiRequest('updatePlayers', o.toUpdate).then(markDone).then((res: boolean) => {
                 assert(res, "Update players in TFBÖ-database was unsuccessful!");
-                return o.idMap;
+                return {idMap: o.idMap, nameMap: o.nameMap};
             });
         } else {
-            return o.idMap;
+            return {idMap: o.idMap, nameMap: o.nameMap};
         }
-    }).then((idMap: {[key: number]: number}) => {
+    }).then((o: {idMap: {[key: number]: number}, nameMap: {[key: number]: String}}) => {
         for (let info in t.playerInfos) {
-            assert(t.playerInfos[info].tmpId in idMap, "Couldn't find or add player " + t.playerInfos[info].toString());
+            assert(t.playerInfos[info].tmpId in o.idMap, "Couldn't find or add player " + t.playerInfos[info].toString());
         }
         for (let comp of t.tournament.competitions) {
             for (let team of comp.teams) {
-                exchangeIds(team.players, idMap);
+                exchangeIds(team.players, o.idMap);
             }
             for (let phase of comp.phases) {
                 for (let match of phase.matches) {
                     for (let game of match.games) {
-                        exchangeIds(game.playersA, idMap);
-                        exchangeIds(game.playersB, idMap);
+                        exchangeIds(game.playersA, o.idMap);
+                        exchangeIds(game.playersB, o.idMap);
                     }
                 }
             }
         }
-    }).then(() => {
-        document.getElementById("log").innerHTML += "<br>Upload fast file to TFBÖ-Server ...";
-        let data = new FormData();
-        data.append("tournamentFile", file);
-        data.append("userIdentifier", t.tournament.userIdentifier);
-        data.append("extension", "fast");
-        return $.ajax({
-            url: server + "/uploadFile",
-            type: 'POST',
-            contentType: false,
-            processData: false,
-            data: data,
-            timeout: 3600000,
-            headers: {'Authorization': 'bearer ' + token},
-        }).catch(catchAPIErrors).then((res: any, status: string) => {
-            if (status !== "success" || res !== true) {
-                throw new Error("Unsuccessful ajax request! " + server + "/uploadFile");
+        return o.nameMap
+    }).then((nameMap: {[key: number]: String}) => {
+        if (setNonPlayingParticipants) {
+            let log = document.getElementById("log").innerHTML;
+            console.log(t);
+            console.log(nameMap);
+            let tableDiv = document.createElement("div");
+            let competitionTable = document.createElement("table");
+            let headers = document.createElement("tr");
+            tableDiv.appendChild(headers);
+            tableDiv.appendChild(competitionTable);
+            let competitionHeader = document.createElement("th");
+            competitionHeader.innerText = "Competition";
+            headers.appendChild(competitionHeader);
+            let categoryHeader = document.createElement("th");
+            categoryHeader.innerText = "Set playing participants";
+            headers.appendChild(categoryHeader);
+            for (let competition of t.tournament.competitions) {
+                let tr = document.createElement("tr");
+                let competitionNameEntry = document.createElement("td");
+                competitionNameEntry.innerText = competition.name;
+                tr.appendChild(competitionNameEntry);
+                let nonPlayingParticipantsButtonEntry = document.createElement("td");
+                let nonPlayingParticipantsButton = document.createElement("button");
+                nonPlayingParticipantsButtonEntry.appendChild(nonPlayingParticipantsButton);
+                nonPlayingParticipantsButton.type = "button";
+                nonPlayingParticipantsButton.innerText = "Specify playing participants";
+                tr.appendChild(nonPlayingParticipantsButtonEntry);
+                competitionTable.appendChild(tr);
+
+                let additionalRow = document.createElement("tr");
+                let fullAdditionalRow = document.createElement("td");
+                fullAdditionalRow.colSpan = 2;
+                additionalRow.appendChild(fullAdditionalRow);
+                competitionTable.appendChild(additionalRow);
+
+                let teamMap: {[key: number]: Team} = {};
+
+                for (let team of competition.teams) {
+                    teamMap[team.startNumber] = team;
+                }
+
+                nonPlayingParticipantsButton.onclick = function() {
+                    fullAdditionalRow.innerHTML = "";
+                    let teamsTable = document.createElement("table");
+                    fullAdditionalRow.appendChild(teamsTable);
+
+                    let headers = document.createElement("tr");
+                    let teamHeader = document.createElement("th");
+                    teamHeader.innerText = "Team";
+                    headers.appendChild(teamHeader);
+                    let playedHeader = document.createElement("th");
+                    playedHeader.innerText = "Played";
+                    headers.appendChild(categoryHeader);
+                    let detailsHeader = document.createElement("th");
+                    detailsHeader.innerText = "Details";
+                    headers.appendChild(detailsHeader);
+
+                    teamsTable.appendChild(headers);
+
+                    for (let team of competition.teams) {
+                        let teamRow = document.createElement("tr");
+                        teamsTable.appendChild(teamRow);
+                        let teamName = document.createElement("td");
+                        
+
+                        let getTeamName = function(team: Team) {
+                            let name = "";
+                            for (let player of team.players) {
+                                if (name != "") {
+                                    name += " und ";
+                                }
+                                name += nameMap[player];
+                            }
+                            return name;
+                        }
+
+                        
+                        teamName.innerText = getTeamName(team);
+
+                        let playedCompetitionCheckboxEntry = document.createElement("td");
+                        let playedCompetitionCheckbox = document.createElement("input");
+                        playedCompetitionCheckbox.type = "checkbox";
+                        playedCompetitionCheckbox.checked = true;
+
+                        let allMatches: [Match, Phase][] = [];
+                        let uniqueRankMap: {[key: number]: {[key: number]: Ranking}} = {};
+                        for (let phase of competition.phases) {
+                            let uRankMap: {[key: number]: Ranking} = {};
+                            // search unique rank of team
+                            let uniqueRank = 0;
+                            for (let ranking of phase.rankings) {
+                                uRankMap[ranking.uniqueRank] = ranking;
+                                if (ranking.teamStartNumbers.indexOf(team.startNumber) >= 0) {
+                                    uniqueRank = ranking.uniqueRank;
+                                }
+                            }
+                            for (let match of phase.matches) {
+                                if (match.played && match.rankingsAUniqueRanks.concat(match.rankingsBUniqueRanks).indexOf(uniqueRank) >= 0) {
+                                    allMatches.push([match, phase]);
+                                }
+                            }
+                            uniqueRankMap[phase.phaseNumber] = uRankMap;
+                        }
+
+                        let rankingName = function(ranking: Ranking) {
+                            if (ranking.name !== undefined) {
+                                return ranking.name;
+                            }
+                            let name = "";
+                            for (let startNumber of ranking.teamStartNumbers) {
+                                if (name != "") {
+                                    name += " und ";
+                                }
+                                name += getTeamName(teamMap[startNumber]);
+                            }
+                            return name;
+                        }
+                        let rankingsName = function(uniqueRanks: number[], phase: Phase) {
+                            let name = "";
+                            for (let uniqueRank of uniqueRanks) {
+                                if (name != "") {
+                                    name += " und ";
+                                }
+                                name += rankingName(uniqueRankMap[phase.phaseNumber][uniqueRank]); 
+                            }
+                            return name;
+                        }
+
+                        playedCompetitionCheckbox.onchange = function() {
+                            console.log(allMatches);
+                            for (let match of allMatches) {
+                                match[0].played = playedCompetitionCheckbox.checked;
+                            }
+                        };
+                        playedCompetitionCheckboxEntry.appendChild(playedCompetitionCheckbox);
+
+                        let detailsButtonEntry = document.createElement("td");
+                        let detailsButton = document.createElement("button");
+                        detailsButton.setAttribute("type", "button");
+                        detailsButton.innerText = "Specify for each match";
+                        let additionalRow = document.createElement("tr");
+
+                        let additionalRowEntry = document.createElement("td");
+                        additionalRowEntry.colSpan = 3;
+                        additionalRow.appendChild(additionalRowEntry);
+                        detailsButton.onclick = function() {
+                            console.log(allMatches);
+                            let table = document.createElement("table");
+                            additionalRowEntry.innerHTML = "";
+                            additionalRowEntry.appendChild(table);
+                            for (let match of allMatches) {
+                                let matchRow = document.createElement("tr");
+                                table.appendChild(matchRow);
+
+                                let matchEntry = document.createElement("td");
+                                matchRow.appendChild(matchEntry);
+                                matchEntry.innerText = rankingsName(match[0].rankingsAUniqueRanks, match[1]) 
+                                    + " gegen " 
+                                    + rankingsName(match[0].rankingsBUniqueRanks, match[1]);
+                                
+                                let playedCheckboxEntry = document.createElement("td");
+                                matchRow.appendChild(playedCheckboxEntry);
+                                let playedCheckbox = document.createElement("input");
+                                playedCheckboxEntry.appendChild(playedCheckbox);
+                                playedCheckbox.type = "checkbox";
+                                playedCheckbox.checked = match[0].played;
+                                playedCheckbox.onchange = function() {
+                                    match[0].played = playedCheckbox.checked;
+                                };
+                            }
+                        };
+                        detailsButtonEntry.appendChild(detailsButton);
+
+                        teamRow.appendChild(teamName);
+                        teamRow.appendChild(playedCompetitionCheckboxEntry);
+                        teamRow.appendChild(detailsButtonEntry);
+                        teamsTable.appendChild(teamRow);
+                        teamsTable.appendChild(additionalRow);
+                    }
+                };
             }
-        });
+            document.getElementById("log").appendChild(tableDiv);
+            let uploadButton = document.createElement("button");
+            uploadButton.setAttribute("type", "button");
+            uploadButton.innerText = "Upload tournament";
+            uploadButton.onclick = function() {
+                console.log(t);
+                document.getElementById("log").innerHTML = log;
+                upload(t, file);
+            }
+            document.getElementById("log").appendChild(uploadButton);
+        } else {
+            upload(t, file);
+        }
+    }).catch((e: Error) => {
+        let el = document.getElementById("upload-error");
+        el.style.display = "block";
+        el.innerText = e.message;
+    });
+}
+
+function upload(t: TournamentInfo, file: File) {
+    document.getElementById("log").innerHTML += "<br>Upload fast file to TFBÖ-Server ...";
+    let data = new FormData();
+    data.append("tournamentFile", file);
+    data.append("userIdentifier", t.tournament.userIdentifier);
+    data.append("extension", "fast");
+    return $.ajax({
+        url: server + "/uploadFile",
+        type: 'POST',
+        contentType: false,
+        processData: false,
+        data: data,
+        timeout: 3600000,
+        headers: {'Authorization': 'bearer ' + token},
+    })
+    .catch(catchAPIErrors)
+    .then((res: any, status: string) => {
+        if (status !== "success" || res !== true) {
+            throw new Error("Unsuccessful ajax request! " + server + "/uploadFile");
+        }
     }).then(markDone).then(() => {
         document.getElementById("log").innerHTML += "<br>Upload tournament to TFBÖ-database ...";
         return apiRequest('createOrReplaceTournament', t.tournament);

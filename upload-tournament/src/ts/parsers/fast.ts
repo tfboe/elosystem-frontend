@@ -35,7 +35,6 @@ function parseTournamentInfo(xmlDoc: XMLDocument): TournamentInfo {
     assert(xmlDoc.childElementCount === 1, "Wrong number of root elements");
     let ffft = xmlDoc.firstElementChild;
     let tournamentInfo = parseFFFT(ffft);
-    console.log(tournamentInfo);
     return tournamentInfo;
 }
 
@@ -240,9 +239,9 @@ function parseTournament(tournament: Element, playerInfos: PlayerInfoCollection)
     let divCompetitionTable = document.createElement("div");
     div.appendChild(divCompetitionTable);
     let competitionTable = document.createElement("table");
-    divCompetitionTable.appendChild(competitionTable);
     let headers = document.createElement("tr");
     divCompetitionTable.appendChild(headers);
+    divCompetitionTable.appendChild(competitionTable);
     let competitionHeader = document.createElement("th");
     competitionHeader.innerText = "Competition";
     headers.appendChild(competitionHeader);
@@ -271,7 +270,6 @@ function createCategoryDropdown(categoryOptions: string[], competition: Competit
         if (value === "Not Rated") {
             competition.rankingSystems = [];
         } else {
-            console.log(value);
             competition.rankingSystems = [tfboe(value as RankingType)];
         }
     };
@@ -395,10 +393,33 @@ function parseCompetition(competition: Element, timezone: string, playerInfos: P
 
     res.phases = [];
     let phases = getElementsByName(competition, "phase");
-    console.log(res.name);
     for (let el of phases) {
         res.phases.push(parsePhase(el, phases.length, timezone, teamMap, tournament));
     }
+
+    /*
+    // buttons for selecting non-playing participants
+    let nonPlayingParticipantsButtonEntry = document.createElement("td");
+    let nonPlayingParticipantsButton = document.createElement("button");
+    nonPlayingParticipantsButtonEntry.appendChild(nonPlayingParticipantsButton);
+    nonPlayingParticipantsButton.type = "button";
+    nonPlayingParticipantsButton.innerText = "Specify non-playing participants";
+    let additionalRow = document.createElement("tr");
+    let fullAdditionalRow = document.createElement("td");
+    fullAdditionalRow.colSpan = 3;
+    additionalRow.append(fullAdditionalRow);
+    competitionTable.append(additionalRow);
+    nonPlayingParticipantsButton.onclick = function() {
+        fullAdditionalRow.innerHTML = "";
+        let teamsTable = document.createElement("table");
+        fullAdditionalRow.appendChild(teamsTable);
+        for (let team of res.teams) {
+            let teamRow = document.createElement("tr");
+            teamsTable.append(teamRow);
+            let teamName = document.createElement("td");
+        }
+    };
+    row.appendChild(nonPlayingParticipantsButtonEntry);*/
 
     return res;
 }
@@ -756,8 +777,6 @@ function parsePhase(phase: Element, numPhases: number, timezone: string,
             res.rankings.push(ranking);
         }
     }
-    console.log(res.name);
-    console.log(startNumberUniqueRankMap);
 
     let defaultScoreMode: "ONE_SET" | "BEST_OF_THREE" | "BEST_OF_FIVE" = "ONE_SET";
     let winningGames = getElementByName(phase, "winningGames", true);
@@ -989,11 +1008,6 @@ function parseItsfPeople(el: Element, licenseMap: { [key: number]: PlayerInfo[] 
 
         if (licenseNr in licenseMap) {
             let playerInfo = parsePlayer(getElementByName(federationMember, "player"), true);
-            if (licenseNr == 4000900) {
-                console.log("found Wilfort");
-                console.log(member);
-                console.log(playerInfo);
-            }
             for (let player of licenseMap[licenseNr]) {
                 player.firstName = playerInfo.firstName;
                 player.lastName = playerInfo.lastName;
