@@ -397,30 +397,6 @@ function parseCompetition(competition: Element, timezone: string, playerInfos: P
         res.phases.push(parsePhase(el, phases.length, timezone, teamMap, tournament));
     }
 
-    /*
-    // buttons for selecting non-playing participants
-    let nonPlayingParticipantsButtonEntry = document.createElement("td");
-    let nonPlayingParticipantsButton = document.createElement("button");
-    nonPlayingParticipantsButtonEntry.appendChild(nonPlayingParticipantsButton);
-    nonPlayingParticipantsButton.type = "button";
-    nonPlayingParticipantsButton.innerText = "Specify non-playing participants";
-    let additionalRow = document.createElement("tr");
-    let fullAdditionalRow = document.createElement("td");
-    fullAdditionalRow.colSpan = 3;
-    additionalRow.append(fullAdditionalRow);
-    competitionTable.append(additionalRow);
-    nonPlayingParticipantsButton.onclick = function() {
-        fullAdditionalRow.innerHTML = "";
-        let teamsTable = document.createElement("table");
-        fullAdditionalRow.appendChild(teamsTable);
-        for (let team of res.teams) {
-            let teamRow = document.createElement("tr");
-            teamsTable.append(teamRow);
-            let teamName = document.createElement("td");
-        }
-    };
-    row.appendChild(nonPlayingParticipantsButtonEntry);*/
-
     return res;
 }
 

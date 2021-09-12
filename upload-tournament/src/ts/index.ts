@@ -210,6 +210,38 @@ class AsyncResponse {
     "async-id": string;
 }
 
+function setPlayedCompetitionCheckbox(checkbox: HTMLInputElement, allMatches: [Match, Phase, HTMLInputElement][]) {
+    let playedOne = false;
+    let playedAll = true;
+
+    for (let match of allMatches) {
+        if (match[0].played) {
+            playedOne = true;
+        } else {
+            playedAll = false;
+        }
+    }
+
+    checkbox.indeterminate = false;
+    if (allMatches.length === 0) {
+        checkbox.checked = false;
+        checkbox.disabled = true;
+    } else if (playedAll) {
+        checkbox.checked = true;
+    } else if (playedOne) {
+        checkbox.indeterminate = true;
+    } else {
+        checkbox.checked = false;
+    }
+}
+
+function setMatchPlayed(match: Match, played: boolean) {
+    match.played = played;
+    for (let game of match.games) {
+        game.played = played;
+    }
+}
+
 
 function prepareUpload(t: TournamentInfo, file: File, setNonPlayingParticipants: boolean) {
     document.getElementById("file").setAttribute("disabled", "true");
@@ -319,8 +351,6 @@ function prepareUpload(t: TournamentInfo, file: File, setNonPlayingParticipants:
     }).then((nameMap: {[key: number]: String}) => {
         if (setNonPlayingParticipants) {
             let log = document.getElementById("log").innerHTML;
-            console.log(t);
-            console.log(nameMap);
             let tableDiv = document.createElement("div");
             let competitionTable = document.createElement("table");
             let headers = document.createElement("tr");
@@ -398,9 +428,8 @@ function prepareUpload(t: TournamentInfo, file: File, setNonPlayingParticipants:
                         let playedCompetitionCheckboxEntry = document.createElement("td");
                         let playedCompetitionCheckbox = document.createElement("input");
                         playedCompetitionCheckbox.type = "checkbox";
-                        playedCompetitionCheckbox.checked = true;
 
-                        let allMatches: [Match, Phase][] = [];
+                        let allMatches: [Match, Phase, HTMLInputElement][] = [];
                         let uniqueRankMap: {[key: number]: {[key: number]: Ranking}} = {};
                         for (let phase of competition.phases) {
                             let uRankMap: {[key: number]: Ranking} = {};
@@ -414,7 +443,7 @@ function prepareUpload(t: TournamentInfo, file: File, setNonPlayingParticipants:
                             }
                             for (let match of phase.matches) {
                                 if (match.played && match.rankingsAUniqueRanks.concat(match.rankingsBUniqueRanks).indexOf(uniqueRank) >= 0) {
-                                    allMatches.push([match, phase]);
+                                    allMatches.push([match, phase, null]);
                                 }
                             }
                             uniqueRankMap[phase.phaseNumber] = uRankMap;
@@ -444,10 +473,13 @@ function prepareUpload(t: TournamentInfo, file: File, setNonPlayingParticipants:
                             return name;
                         }
 
+                        setPlayedCompetitionCheckbox(playedCompetitionCheckbox, allMatches);
                         playedCompetitionCheckbox.onchange = function() {
-                            console.log(allMatches);
                             for (let match of allMatches) {
-                                match[0].played = playedCompetitionCheckbox.checked;
+                                setMatchPlayed(match[0], playedCompetitionCheckbox.checked);
+                                if (match[2] !== null) {
+                                    match[2].checked = playedCompetitionCheckbox.checked;
+                                }
                             }
                         };
                         playedCompetitionCheckboxEntry.appendChild(playedCompetitionCheckbox);
@@ -462,7 +494,6 @@ function prepareUpload(t: TournamentInfo, file: File, setNonPlayingParticipants:
                         additionalRowEntry.colSpan = 3;
                         additionalRow.appendChild(additionalRowEntry);
                         detailsButton.onclick = function() {
-                            console.log(allMatches);
                             let table = document.createElement("table");
                             additionalRowEntry.innerHTML = "";
                             additionalRowEntry.appendChild(table);
@@ -483,8 +514,10 @@ function prepareUpload(t: TournamentInfo, file: File, setNonPlayingParticipants:
                                 playedCheckbox.type = "checkbox";
                                 playedCheckbox.checked = match[0].played;
                                 playedCheckbox.onchange = function() {
-                                    match[0].played = playedCheckbox.checked;
+                                    setMatchPlayed(match[0], playedCheckbox.checked);
+                                    setPlayedCompetitionCheckbox(playedCompetitionCheckbox, allMatches);
                                 };
+                                match[2] = playedCheckbox;
                             }
                         };
                         detailsButtonEntry.appendChild(detailsButton);
@@ -502,7 +535,6 @@ function prepareUpload(t: TournamentInfo, file: File, setNonPlayingParticipants:
             uploadButton.setAttribute("type", "button");
             uploadButton.innerText = "Upload tournament";
             uploadButton.onclick = function() {
-                console.log(t);
                 document.getElementById("log").innerHTML = log;
                 upload(t, file);
             }
