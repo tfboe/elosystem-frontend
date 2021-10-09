@@ -39,7 +39,7 @@
           $('#output-div').html("Logging in ... success<br>Recalculate rankings ... ");
           const token = jqXHR.getResponseHeader('jwt-token');
           $.ajax({
-            url: base_url + "/admin/mergePlayers",
+            url: base_url + "/manage/mergePlayers",
             method: "POST",
             contentType: "application/json; charset=utf-8",
             dataType: "json",
