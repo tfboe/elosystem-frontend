@@ -790,8 +790,10 @@ function parsePhase(phase: Element, numPhases: number, timezone: string,
     }
 
     res.matches = [];
+    const useScore = getElementByName(phase, "useScore").textContent === "true";
+    const isDoubleElimination = getElementByName(phase, "phaseType").textContent === "D";
     for (let match of getElementsByName(phase, "teamMatch")) {
-        let m = parseMatch(match, timezone, teamMap, startNumberUniqueRankMap, rankingEls.length !== 0, res.rankings, defaultScoreMode, defaultLoserBracketMode);
+        let m = parseMatch(match, timezone, teamMap, startNumberUniqueRankMap, rankingEls.length !== 0, res.rankings, defaultScoreMode, defaultLoserBracketMode, useScore, isDoubleElimination);
         if (m !== null) {
             res.matches.push(m);
         }
@@ -803,7 +805,9 @@ function parseMatch(match: Element, timezone: string, teamMap: { [key: number]: 
                     startNumberUniqueRankMap: { [key: number]: number }, phaseFinished: boolean,
                     rankings: Ranking[], 
                     defaultScoreMode: "ONE_SET" | "BEST_OF_THREE" | "BEST_OF_FIVE", 
-                    defaultLoserBracketMode: "ONE_SET" | "BEST_OF_THREE" | "BEST_OF_FIVE"): Match | null {
+                    defaultLoserBracketMode: "ONE_SET" | "BEST_OF_THREE" | "BEST_OF_FIVE",
+                    useScore: boolean,
+                    isDoubleElimination: boolean): Match | null {
     let id2 = getElementByName(match, "team2Id", true);
     let id1 = getElementByName(match, "team1Id", true);
     let id = parseInt(match.getAttribute("id"));
@@ -856,12 +860,23 @@ function parseMatch(match: Element, timezone: string, teamMap: { [key: number]: 
     } else {
         res.resultA = 0;
         res.resultB = 0;
+        console.log(useScore);
+        let doubleEliminationFinalsWithScore = isDoubleElimination && useScore && parseInt(getElementByName(match, "nodeRank").textContent) === 1;
         for (let game of games) {
             let resA = parseInt(getElementByName(game, "scoreTeam1").textContent);
             let resB = parseInt(getElementByName(game, "scoreTeam2").textContent);
-            if (games.length === 1) {
+            if (games.length === 1 || !useScore) {
                 res.resultA = resA;
                 res.resultB = resB;
+            } else if (doubleEliminationFinalsWithScore) {
+                // we look at the winner of the last game to identify the overall winner
+                if (resA > resB) {
+                    res.resultA = 1;
+                    res.resultB = 0;
+                } else if (resB > resA) {
+                    res.resultA = 0;
+                    res.resultB = 1;
+                }
             } else if (resA > resB) {
                 res.resultA += 1;
             } else if (resB > resA) {
@@ -871,6 +886,7 @@ function parseMatch(match: Element, timezone: string, teamMap: { [key: number]: 
                 res.resultB += 0.5;
             }
         }
+        console.log(res.resultA + res.resultB);
         res.played = res.resultA >= 0 && res.resultB >= 0 && teamA.players.length > 0 && teamB.players.length > 0; //otherwise it is a forfeit
         res.result = res.resultA > res.resultB ? "TEAM_A_WINS" : (res.resultB > res.resultA ? "TEAM_B_WINS" : (
             res.resultA === 0 ? "NOT_YET_FINISHED" : "DRAW"));
@@ -904,7 +920,7 @@ function parseMatch(match: Element, timezone: string, teamMap: { [key: number]: 
         assert(!game.played || game.playersA.length === game.playersB.length,
             "We don't support games with different number of players at the moment, see match " + id);
         res.games = [game];
-        if (games.length === 1) {
+        if (games.length === 1 || !useScore || doubleEliminationFinalsWithScore) {
             res.scoreMode = "ONE_SET";
         } else {
             let maxScore = Math.max(res.resultA, res.resultB);
@@ -913,14 +929,6 @@ function parseMatch(match: Element, timezone: string, teamMap: { [key: number]: 
             } else if (maxScore == 2) {
                 res.scoreMode = "BEST_OF_THREE";
             } else if (maxScore == 3) {
-                res.scoreMode = "BEST_OF_FIVE";
-            } else if (maxScore == 4) {
-                //probably the result of a final of a double elimination tournament.
-                //Since we don't know if it was Berliner Zeitmodell or not we say it is only one best of three.
-                res.scoreMode = "BEST_OF_THREE";
-            } else if (maxScore == 6) {
-                //probably the result of a final of a double elimination tournament.
-                //Since we don't know if it was Berliner Zeitmodell or not we say it is only one best of five.
                 res.scoreMode = "BEST_OF_FIVE";
             } else {
                 throw Error("Unsupported number of games (winner has won " + maxScore + " games!) in match " + id);
