@@ -86,8 +86,7 @@ function parseRegisteredPlayers(el: Element): PlayerInfoCollection {
         } else {
             let id = parseInt(getElementByName(info, "playerId").textContent);
             assert(!(id in res), "double id " + id + " in registeredPlayers");
-            res[id] = new PlayerInfo();
-            res[id].tmpId = id;
+            res[id] = new PlayerInfo(id);
             res[id].itsfLicenseNumber = parseLicenseNumber(getElementByName(info, "noLicense").textContent);
         }
     }
@@ -139,8 +138,7 @@ function parseITSFMember(el: Element): PlayerInfo {
 function parsePlayer(player: Element, allowBirthDateNull: boolean = false): PlayerInfo {
     assert(player.nodeName === 'player', "Wrong player type");
     let id = parseInt(getElementByName(player, "id").textContent);
-    let info = new PlayerInfo();
-    info.tmpId = id;
+    let info = new PlayerInfo(id);
     let person = getElementByName(player, "person");
     info.firstName = getElementByName(person, "firstName").textContent;
     info.lastName = titleCase(getElementByName(person, "lastName").textContent);

@@ -16,10 +16,11 @@ export interface PlayerInfoCollection {
 }
 
 export class PurePlayerInfo {
-    firstName?: string;
-    lastName?: string;
-    birthday?: string;
-    itsfLicenseNumber?: number;
+    constructor(
+        public firstName?: string, 
+        public lastName?: string, 
+        public birthday?: string, 
+        public itsfLicenseNumber?: number) {}
 
     toString(): string {
         let res = "";
@@ -45,7 +46,15 @@ export class PurePlayerInfo {
 }
 
 export class PlayerInfo extends PurePlayerInfo {
-    tmpId: number;
+    constructor(
+        public tmpId: number,
+        firstName?: string, 
+        lastName?: string, 
+        birthday?: string, 
+        itsfLicenseNumber?: number
+    ) {
+        super(firstName, lastName, birthday, itsfLicenseNumber);
+    }
 }
 
 export class Tournament extends Modes {

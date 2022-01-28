@@ -91,7 +91,16 @@ class GetAsyncRequestResponse {
 }
 
 class TfboePlayerInfo extends PlayerInfo {
-    id: number
+    constructor(
+        public id: number,
+        tmpId: number,
+        firstName?: string, 
+        lastName?: string, 
+        birthday?: string, 
+        itsfLicenseNumber?: number
+    ) {
+        super(tmpId, firstName, lastName, birthday, itsfLicenseNumber);
+    }
 }
 
 interface IntermediateSearchResult {
@@ -106,6 +115,18 @@ class PlayerResult extends PurePlayerInfo {
     lastName: string;
     birthday: string;
     itsfLicenseNumber: number;
+    itsfLicenseNumberBeforeMerge: number;
+
+    toTfboePlayerInfo(tmpId: number): TfboePlayerInfo {
+        return new TfboePlayerInfo(
+            this.id, 
+            tmpId, 
+            this.firstName, 
+            this.lastName, 
+            this.birthday, 
+            this.itsfLicenseNumber
+        );
+    }
 }
 
 type NameMap = { [key: number]: String };
@@ -154,10 +175,11 @@ export class UploadManager {
             if (found.length > 1) {
                 ambigousPlayers.push(search.toString());
             } else if (found.length === 1) {
-                if (found[0].itsfLicenseNumber != search.itsfLicenseNumber) {
+                if (found[0].itsfLicenseNumber != search.itsfLicenseNumber && (found[0].itsfLicenseNumberBeforeMerge == null 
+                      || found[0].itsfLicenseNumberBeforeMerge != search.itsfLicenseNumber)) {
                     if (found[0].itsfLicenseNumber == null) {
                         found[0].itsfLicenseNumber = search.itsfLicenseNumber;
-                        let p = found[0] as TfboePlayerInfo;
+                        let p = found[0].toTfboePlayerInfo(search.tmpId);
                         p.tmpId = search.tmpId;
                         toUpdate.push(p);
                     } else if (search.itsfLicenseNumber != null) {
