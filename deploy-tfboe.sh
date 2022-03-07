@@ -16,4 +16,4 @@ npm install
 
 cd ..
 
-./_deploy.sh copy-to-tfboe.sh build-for-tfboe.sh /admin
+./_deploy.sh copy-to-tfboe.sh build-for-tfboe.sh /public_html/admin
