@@ -110,12 +110,16 @@ interface IntermediateSearchResult {
 }
 
 class PlayerResult extends PurePlayerInfo {
-    id: number;
-    firstName: string;
-    lastName: string;
-    birthday: string;
-    itsfLicenseNumber: number;
-    itsfLicenseNumberBeforeMerge: number;
+    constructor(
+        public id: number,
+        public firstName: string, 
+        public lastName: string, 
+        public birthday: string, 
+        public itsfLicenseNumber: number,
+        public itsfLicenseNumberBeforeMerge?: number | null
+    ) {
+        super(firstName, lastName, birthday, itsfLicenseNumber);
+    }
 
     toTfboePlayerInfo(tmpId: number): TfboePlayerInfo {
         return new TfboePlayerInfo(
@@ -210,6 +214,12 @@ export class UploadManager {
     async searchPlayer(data: PlayerInfo[]) {
         document.getElementById("log").innerHTML += "<br>Searching players in TFBÖ-database ...";
         let result = await this.apiRequest('searchPlayers', data);
+        for (let index in result) {
+            for (let playerId in result[index]) {
+                let anyObject = result[index][playerId];
+                result[index][playerId] = new PlayerResult(anyObject.id, anyObject.firstName, anyObject.lastName, anyObject.birthday, anyObject.itsfLicenseNumber, anyObject.itsfLicenseNumberBeforeMerge);
+            }
+        }
         markDone();
         return this.resolveSearchResult(data, result);
     }

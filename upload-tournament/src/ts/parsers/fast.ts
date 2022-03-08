@@ -246,13 +246,91 @@ function parseTournament(tournament: Element, playerInfos: PlayerInfoCollection)
     let categoryHeader = document.createElement("th");
     categoryHeader.innerText = "Category";
     headers.appendChild(categoryHeader);
+    let dependentCompetitions: {[key: number]: Element[]} = [];
+    let phaseIdToPhaseMap: { [key: string]: [Phase, Competition] } = {};
     for (let el of getElementsByName(tournament, "competition")) {
-        let competition = parseCompetition(el, timezone, res.playerInfos, res.tournament, competitionTable);
+        let competition = parseCompetition(el, timezone, res.playerInfos, res.tournament, competitionTable, phaseIdToPhaseMap, dependentCompetitions);
         if (competition !== null) {
             res.tournament.competitions.push(competition);
         }
     }
+    let phaseOrders = Object.keys(dependentCompetitions).map(Number);
+    phaseOrders.sort();
+    for (let phaseOrder of phaseOrders) {
+        for (let el of dependentCompetitions[phaseOrder]) {
+            let linkedPhaseId = getElementByName(el, "linkToPhaseId", false).textContent;
+            let linkedPhaseTuple = phaseIdToPhaseMap[linkedPhaseId];
+            if (linkedPhaseTuple === null) {
+                throw new ParseError("Linked phase id " + linkedPhaseId + " does not exist in tournament");
+            }
+            addParallelPhase(linkedPhaseTuple, el, timezone, res.tournament);
+        }
+    }
     return res;
+}
+
+function addParallelPhase([linkedPhase, linkedCompetition]: [Phase, Competition], competition: Element, timezone: string, tournament: Tournament) {
+    assert(linkedPhase.nextPhaseNumbers.length === 0, "Parallel phases are only allowed for the last phase.");
+    assert(linkedPhase.matches.length === 0, "Linked phases shouldn't contain matches");
+
+    let playersToTeam: { [key: string]: Team } = {};
+    for (let team of linkedCompetition.teams) {
+        playersToTeam[team.players.slice().sort().toString()] = team;
+    }
+    let teamMap: {[key: number]: Team} = {};
+    for (let competitionTeamEl of getElementsByName(competition, "competitionTeam")) {
+        let teamEl = getElementByName(competitionTeamEl, "team");
+        let playerIds = [];
+        let i = 1;
+        let keyFn = () => "player" + i + "Id";
+        let elFn = () => getElementByName(teamEl, keyFn(), true);
+        let el = elFn();
+        while (el !== null) {
+            let id = parseInt(el.textContent);
+            playerIds.push(id);
+            i += 1;
+            el = elFn();
+        }
+        let playersKey = playerIds.sort().toString();
+        let team = playersToTeam[playersKey];
+        if (team === null) {
+            throw new ParseError("Couldn't find team (" + playersKey + ") in linked competition " + linkedCompetition.name);
+        }
+
+        let id = parseInt(getElementByName(competitionTeamEl, "id").textContent)
+        teamMap[id] = team;
+    }
+
+    let phases = getElementsByName(competition, "phase");
+    assert(phases.length === linkedPhase.phaseNumber, "Linked phase with incorrect phase number!");
+    for (let i = 0; i < phases.length - 1; i++) {
+        assert(getElementsByName(phases[i], "teamMatch").length === 0, "Linked phase has previous phase with matches!");
+    }
+    let phaseOrder = parseInt(getElementByName(competition, "phaseOrder").textContent);
+    let rankingOffset = 0;
+    if (phaseOrder > 1) {
+        assert(linkedCompetition.phases[linkedPhase.phaseNumber - 1] != linkedPhase, "phaseOrder 2 was called without a phaseOrder 1");
+        assert(linkedCompetition.phases.length === linkedPhase.phaseNumber + phaseOrder - 2, "Wrong number of phases in linked competition with phaseOrder > 1");
+        for (let i = linkedPhase.phaseNumber - 1; i < linkedCompetition.phases.length; i++) {
+            rankingOffset += linkedCompetition.phases[i].rankings.length;
+        }
+    }
+    let phase = parsePhase(phases[phases.length - 1], phases.length, timezone, teamMap, tournament, rankingOffset);
+    assert(phase.nextPhaseNumbers.length === 0, "A phase that has a linked phase cannot have next phases");
+    if (phaseOrder === 1) {
+        assert(linkedCompetition.phases.length === linkedPhase.phaseNumber, "Linked phase must be last phase of linked competition");
+        assert(linkedCompetition.phases[linkedPhase.phaseNumber - 1] == linkedPhase, "Two phases with phaseOrder 1 linked to linked phase");
+        linkedCompetition.phases[linkedPhase.phaseNumber - 1] = phase;
+        phase.phaseNumber = linkedPhase.phaseNumber;
+    } else {
+        linkedCompetition.phases.push(phase);
+        phase.phaseNumber = linkedCompetition.phases.length;
+        for (let previousPhase of linkedCompetition.phases) {
+            if (previousPhase.nextPhaseNumbers.indexOf(linkedPhase.phaseNumber) > -1) {
+                previousPhase.nextPhaseNumbers.push(phase.phaseNumber);
+            }
+        }
+    }
 }
 
 function createCategoryDropdown(categoryOptions: string[], competition: Competition): HTMLSelectElement {
@@ -275,11 +353,19 @@ function createCategoryDropdown(categoryOptions: string[], competition: Competit
 }
 
 function parseCompetition(competition: Element, timezone: string, playerInfos: PlayerInfoCollection,
-                          tournament: Tournament, competitionTable: HTMLTableElement): Competition {
+                          tournament: Tournament, competitionTable: HTMLTableElement, 
+                          phaseIdToPhaseMap: { [key: string]: [Phase, Competition] }, 
+                          dependentCompetionts: {[key: number]: Element[]}): Competition {
     assert(competition.nodeName === 'competition', "Wrong competition element");
     let linkToPhaseId = getElementByName(competition, "linkToPhaseId", true);
-    assert(linkToPhaseId === null || linkToPhaseId.textContent === "0",
-        "We don't support Multigroups yet!");
+    if (linkToPhaseId !== null && linkToPhaseId.textContent !== "0") {
+        let phaseOrder = parseInt(getElementByName(competition, "phaseOrder").textContent);
+        if (!(phaseOrder in dependentCompetionts)) {
+            dependentCompetionts[phaseOrder] = [];
+        }
+        dependentCompetionts[phaseOrder].push(competition);
+        return null;
+    }
     let res = new Competition();
     res.name = getCompetitionName(competition);
     res.rankingSystems = [];
@@ -392,7 +478,9 @@ function parseCompetition(competition: Element, timezone: string, playerInfos: P
     res.phases = [];
     let phases = getElementsByName(competition, "phase");
     for (let el of phases) {
-        res.phases.push(parsePhase(el, phases.length, timezone, teamMap, tournament));
+        let phase = parsePhase(el, phases.length, timezone, teamMap, tournament, 0);
+        res.phases.push(phase);
+        phaseIdToPhaseMap[el.getAttribute("id")] = [phase, res];
     }
 
     return res;
@@ -693,7 +781,7 @@ function parseTeam(team: Element, playerInfos: PlayerInfoCollection, mastersNumb
 }
 
 function parsePhase(phase: Element, numPhases: number, timezone: string,
-                    teamMap: { [key: number]: Team }, tournament: Tournament): Phase {
+                    teamMap: { [key: number]: Team }, tournament: Tournament, rankingOffset: number): Phase {
     assert(phase.nodeName === 'phase', "Wrong phase element");
     assert(getElementByName(phase, "isMaster").textContent === "false",
         "We don't support Master phases yet!");
@@ -745,7 +833,7 @@ function parsePhase(phase: Element, numPhases: number, timezone: string,
             }
             let team = teamMap[parseInt(getElementByName(sub, "teamId").textContent)];
             let startNumber = team.startNumber;
-            team.rank = ranking.rank;
+            team.rank = ranking.rank + rankingOffset;
             ranking.teamStartNumbers = [startNumber];
             startNumberUniqueRankMap[startNumber] = ranking.uniqueRank;
             res.rankings.push(ranking);
@@ -858,7 +946,6 @@ function parseMatch(match: Element, timezone: string, teamMap: { [key: number]: 
     } else {
         res.resultA = 0;
         res.resultB = 0;
-        console.log(useScore);
         let doubleEliminationFinalsWithScore = isDoubleElimination && useScore && parseInt(getElementByName(match, "nodeRank").textContent) === 1;
         for (let game of games) {
             let resA = parseInt(getElementByName(game, "scoreTeam1").textContent);
@@ -884,7 +971,6 @@ function parseMatch(match: Element, timezone: string, teamMap: { [key: number]: 
                 res.resultB += 0.5;
             }
         }
-        console.log(res.resultA + res.resultB);
         res.played = res.resultA >= 0 && res.resultB >= 0 && teamA.players.length > 0 && teamB.players.length > 0; //otherwise it is a forfeit
         res.result = res.resultA > res.resultB ? "TEAM_A_WINS" : (res.resultB > res.resultA ? "TEAM_B_WINS" : (
             res.resultA === 0 ? "NOT_YET_FINISHED" : "DRAW"));
