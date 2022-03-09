@@ -950,7 +950,7 @@ function parseMatch(match: Element, timezone: string, teamMap: { [key: number]: 
         for (let game of games) {
             let resA = parseInt(getElementByName(game, "scoreTeam1").textContent);
             let resB = parseInt(getElementByName(game, "scoreTeam2").textContent);
-            if (games.length === 1 || !useScore) {
+            if (games.length === 1) {
                 res.resultA = resA;
                 res.resultB = resB;
             } else if (doubleEliminationFinalsWithScore) {
@@ -1018,7 +1018,7 @@ function parseMatch(match: Element, timezone: string, teamMap: { [key: number]: 
                 throw Error("Unsupported number of games (winner has won " + maxScore + " games!) in match " + id);
             }
         }
-        if (res.scoreMode === "ONE_SET" && res.resultA + res.resultB === 1) {
+        if (res.scoreMode === "ONE_SET" && (res.resultA + res.resultB === 1 || !useScore)) {
             // use default scoreMode
             if (getElementByName(match, "isWinnerBracket").textContent === "false") {
                 res.scoreMode = defaultLoserBracketMode;
