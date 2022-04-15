@@ -116,7 +116,7 @@ class PlayerResult extends PurePlayerInfo {
         public lastName: string, 
         public birthday: string, 
         public itsfLicenseNumber: number,
-        public itsfLicenseNumberBeforeMerge?: number | null
+        public itsfLicenseNumbersBeforeMerge: number[],
     ) {
         super(firstName, lastName, birthday, itsfLicenseNumber);
     }
@@ -164,7 +164,6 @@ export class UploadManager {
 
     resolveSearchResult(data: PlayerInfo[], res: IntermediateSearchResult): SearchResult {
         let ambigousPlayers = [];
-        let ambiguousItsfNumbers = [];
         let newPlayers = [];
         let newPlayersWithoutName = [];
         let toUpdate = [];
@@ -179,17 +178,13 @@ export class UploadManager {
             if (found.length > 1) {
                 ambigousPlayers.push(search.toString());
             } else if (found.length === 1) {
-                if (found[0].itsfLicenseNumber != search.itsfLicenseNumber && (found[0].itsfLicenseNumberBeforeMerge == null 
-                      || found[0].itsfLicenseNumberBeforeMerge != search.itsfLicenseNumber)) {
-                    if (found[0].itsfLicenseNumber == null) {
-                        found[0].itsfLicenseNumber = search.itsfLicenseNumber;
-                        let p = found[0].toTfboePlayerInfo(search.tmpId);
-                        p.tmpId = search.tmpId;
-                        toUpdate.push(p);
-                    } else if (search.itsfLicenseNumber != null) {
-                        //both numbers are not null and not equal error
-                        ambiguousItsfNumbers.push(search.toString() + " != " + found[0].itsfLicenseNumber);
-                    }
+                if (search.itsfLicenseNumber != null && found[0].itsfLicenseNumber != search.itsfLicenseNumber && found[0].itsfLicenseNumbersBeforeMerge.indexOf(search.itsfLicenseNumber) === -1) {
+                    console.log(search);
+                    console.log(found[0]);
+                    found[0].itsfLicenseNumber = search.itsfLicenseNumber;
+                    let p = found[0].toTfboePlayerInfo(search.tmpId);
+                    p.tmpId = search.tmpId;
+                    toUpdate.push(p);
                 }
                 idMap[search.tmpId] = found[0].id;
                 nameMap[found[0].id] = found[0].firstName + " " + found[0].lastName;
@@ -204,9 +199,6 @@ export class UploadManager {
 
         if (ambigousPlayers.length > 0) {
             throw new Error("The following players where ambiguous in the database: " + ambigousPlayers.join());
-        } else if (ambiguousItsfNumbers.length > 0) {
-            throw new Error("The following players have ambiguous itsf license numbers in the database: " +
-                ambiguousItsfNumbers.join());
         }
         return { toUpdate: toUpdate, idMap: idMap, newPlayers: newPlayers, newPlayersWithoutName: newPlayersWithoutName, nameMap: nameMap };
     }
@@ -217,7 +209,7 @@ export class UploadManager {
         for (let index in result) {
             for (let playerId in result[index]) {
                 let anyObject = result[index][playerId];
-                result[index][playerId] = new PlayerResult(anyObject.id, anyObject.firstName, anyObject.lastName, anyObject.birthday, anyObject.itsfLicenseNumber, anyObject.itsfLicenseNumberBeforeMerge);
+                result[index][playerId] = new PlayerResult(anyObject.id, anyObject.firstName, anyObject.lastName, anyObject.birthday, anyObject.itsfLicenseNumber, anyObject.itsfLicenseNumbersBeforeMerge);
             }
         }
         markDone();
@@ -610,6 +602,7 @@ export class UploadManager {
                 await this.addPlayersToTFBOEDatabase(searchResult);
             }
             if (searchResult.toUpdate.length > 0) {
+                console.log(searchResult.toUpdate);
                 await this.updatePlayers(searchResult);
             }
             this.postProcessSearchResult(searchResult);
