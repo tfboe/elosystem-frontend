@@ -218,8 +218,7 @@ function parseTournament(tournament: Element, playerInfos: PlayerInfoCollection)
     res.tournament.name = getElementByName(tournament, "name").textContent;
     let beginDate = getElementByName(tournament, "beginDate").textContent;
     let endDate = getElementByName(tournament, "endDate").textContent;
-    res.tournament.userIdentifier = res.tournament.name + "_" + tournament.getAttribute('id') + "_" + beginDate + "_" +
-        endDate;
+    res.tournament.userIdentifier = res.tournament.name + "_" + beginDate + "_" + endDate;
     let timezone_el = getElementByName(tournament, "timeZone", true);
     let timezone = "";
     if (timezone_el === null) {
