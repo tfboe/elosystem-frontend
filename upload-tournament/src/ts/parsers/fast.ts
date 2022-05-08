@@ -985,13 +985,18 @@ function parseMatch(match: Element, timezone: string, teamMap: { [key: number]: 
             }
         }
         res.played = res.resultA >= 0 && res.resultB >= 0 && teamA.players.length > 0 && teamB.players.length > 0; //otherwise it is a forfeit
-        res.result = res.resultA > res.resultB ? "TEAM_A_WINS" : (res.resultB > res.resultA ? "TEAM_B_WINS" : (
-            (res.resultA > 0 || (allowTie && !useScore)) ? "DRAW" : "NOT_YET_FINISHED"));
         if (res.resultA < 0) {
             res.resultA = 0;
         }
         if (res.resultB < 0) {
             res.resultB = 0;
+        }
+        res.result = res.resultA > res.resultB ? "TEAM_A_WINS" : (res.resultB > res.resultA ? "TEAM_B_WINS" : (
+            res.resultA === 0 ? "NOT_YET_FINISHED" : "DRAW"));
+        if (res.resultA === 0 && res.resultB === 0 && allowTie && !useScore) {
+            res.result = "DRAW";
+            res.resultA = 1;
+            res.resultB = 1;
         }
 
         let game = new Game();
