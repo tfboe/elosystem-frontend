@@ -877,8 +877,21 @@ function parsePhase(phase: Element, numPhases: number, timezone: string,
     res.matches = [];
     const useScore = getElementByName(phase, "useScore").textContent === "true";
     const isDoubleElimination = getElementByName(phase, "phaseType").textContent === "D";
+    const allowTie = getElementByName(phase, "allowTie").textContent === "true";
     for (let match of getElementsByName(phase, "teamMatch")) {
-        let m = parseMatch(match, timezone, teamMap, startNumberUniqueRankMap, rankingEls.length !== 0, res.rankings, defaultScoreMode, defaultLoserBracketMode, useScore, isDoubleElimination);
+        let m = parseMatch(
+            match, 
+            timezone, 
+            teamMap, 
+            startNumberUniqueRankMap, 
+            rankingEls.length !== 0, 
+            res.rankings, 
+            defaultScoreMode, 
+            defaultLoserBracketMode, 
+            useScore, 
+            isDoubleElimination,
+            allowTie
+        );
         if (m !== null) {
             res.matches.push(m);
         }
@@ -892,7 +905,8 @@ function parseMatch(match: Element, timezone: string, teamMap: { [key: number]: 
                     defaultScoreMode: "ONE_SET" | "BEST_OF_THREE" | "BEST_OF_FIVE", 
                     defaultLoserBracketMode: "ONE_SET" | "BEST_OF_THREE" | "BEST_OF_FIVE",
                     useScore: boolean,
-                    isDoubleElimination: boolean): Match | null {
+                    isDoubleElimination: boolean,
+                    allowTie: boolean): Match | null {
     let id2 = getElementByName(match, "team2Id", true);
     let id1 = getElementByName(match, "team1Id", true);
     let id = parseInt(match.getAttribute("id"));
@@ -972,7 +986,7 @@ function parseMatch(match: Element, timezone: string, teamMap: { [key: number]: 
         }
         res.played = res.resultA >= 0 && res.resultB >= 0 && teamA.players.length > 0 && teamB.players.length > 0; //otherwise it is a forfeit
         res.result = res.resultA > res.resultB ? "TEAM_A_WINS" : (res.resultB > res.resultA ? "TEAM_B_WINS" : (
-            res.resultA === 0 ? "NOT_YET_FINISHED" : "DRAW"));
+            (res.resultA > 0 || (allowTie && !useScore)) ? "DRAW" : "NOT_YET_FINISHED"));
         if (res.resultA < 0) {
             res.resultA = 0;
         }
