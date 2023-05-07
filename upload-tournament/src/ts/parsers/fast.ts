@@ -462,6 +462,9 @@ function parseCompetition(competition: Element, timezone: string, playerInfos: P
         case "BONZINI":
             res.table = "BONZINI";
             break;
+        case "OTHER":
+            res.table = "MULTITABLE";
+            break;
         default:
             throw new ParseError("The tableType field of a competition must be GARLANDO, LEONHART, TORNADO, " +
                 "ROBERTO_SPORT, and/or BONZINI");
