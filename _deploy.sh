@@ -5,7 +5,7 @@ mkdir -p upload-tournament/dist-backup
 COPY_SCRIPT=$1
 shift
 
-TFBOE_HOST="tfboe.org"
+TFBOE_HOST="elo.tfboe.org"
 TFBOE_USER="elo@tfboe.org"
 
 echo -n FTP-Password for tfboe:
