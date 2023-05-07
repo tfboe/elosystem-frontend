@@ -27,10 +27,10 @@ cd ../..
   cp recomputeRankings.html recomputeRankings.html.backup &&
   cp mergePlayers.html mergePlayers.html.backup &&
   cp register.html register.html.backup &&
-  sed -i -e 's/http:\/\/localhost:8000/https:\/\/tfboe-elo.tischfussball.wien/g' login.html &&
-  sed -i -e 's/http:\/\/localhost:8000/https:\/\/tfboe-elo.tischfussball.wien/g' recomputeRankings.html &&
-  sed -i -e 's/http:\/\/localhost:8000/https:\/\/tfboe-elo.tischfussball.wien/g' mergePlayers.html &&
-  sed -i -e 's/http:\/\/localhost:8000/https:\/\/tfboe-elo.tischfussball.wien/g' register.html &&
+  sed -i -e 's/http:\/\/localhost:8000/https:\/\/elo.tfboe.org\/backend\/public/g' login.html &&
+  sed -i -e 's/http:\/\/localhost:8000/https:\/\/elo.tfboe.org\/backend\/public/g' recomputeRankings.html &&
+  sed -i -e 's/http:\/\/localhost:8000/https:\/\/elo.tfboe.org\/backend\/public/g' mergePlayers.html &&
+  sed -i -e 's/http:\/\/localhost:8000/https:\/\/elo.tfboe.org\/backend\/public/g' register.html &&
   echo "Send static scripts via FTP" &&
   ftp -p -i -n $HOST <<END_SCRIPT
 quote USER $USER
