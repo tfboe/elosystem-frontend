@@ -13,6 +13,7 @@ export function tfboe(rankingType: RankingType): null | string {
         case RankingType.SeniorSingle: return "f4f95737-a7ee-11eb-8243-0242ac140002";
         case RankingType.SeniorDouble: return "f7972e41-a7ee-11eb-8243-0242ac140002";
         case RankingType.Classic: return "fbb021e4-a7ee-11eb-8243-0242ac140002";
+        case RankingType.WomenClassic: return "42c15405-e499-11ee-bd3f-00163e334dfa";
         case RankingType.Mixed: return "fe9448f4-a7ee-11eb-8243-0242ac140002";
         default: return null;
     }

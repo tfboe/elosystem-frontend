@@ -94,6 +94,7 @@ export enum RankingType {
     SeniorDouble = "Senior Double",
     Mixed = "Mixed",
     Classic = "Classic"
+    WomenClassic = "Women Classic"
 }
 
 export type RankingTypeString = keyof typeof RankingType;

@@ -406,7 +406,8 @@ function parseCompetition(competition: Element, timezone: string, playerInfos: P
         RankingType.SeniorSingle,
         RankingType.SeniorDouble,
         RankingType.Mixed,
-        RankingType.Classic
+        RankingType.Classic,
+        RankingType.WomenClassic
     ];
 
     let categoryDropdown = createCategoryDropdown(categoryOptions, res);
@@ -696,9 +697,11 @@ function getRankingType(competition: Element): null | RankingType {
                 //we do nothing
                 break
             case "CLASSIC":
-                // we only rank open double
+                // we rank open double and women double
                 if (type === "D" && category === "O") {
                     return RankingType.Classic;
+                } else if (type === "D" && category === "W") {
+                    return RankingType.WomenClassic
                 } else {
                     return null;
                 }
